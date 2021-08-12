@@ -1,0 +1,2 @@
+# zeken
+Binance trading bot
