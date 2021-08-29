@@ -100,7 +100,7 @@ func NewBot(dbPath, apiKey, apiSecret, token string, controlChatID, signalChatID
 
 func (b *Bot) Run(ctx context.Context) error {
 	b.ctx, b.cancel = context.WithCancel(ctx)
-	b.log("🤖 zeken bot running, version", version)
+	b.log(fmt.Sprintf("🤖 zeken bot running\n- version: %s\n- dry mode: %t", version, b.dry))
 	defer b.log("🛑 zeken bot stopped")
 	if err := b.resume(); err != nil {
 		b.log(err)
