@@ -56,6 +56,9 @@ func (p *parser) Parse(text string) (*Signal, error) {
 	if len(exchanges) < 1 {
 		return nil, fmt.Errorf("couldn't parse exchanges: %s", lines[0])
 	}
+	if !strings.Contains(lines[0], "BINANCE") {
+		return nil, fmt.Errorf("not supported exchanges: %s", exchanges)
+	}
 
 	symbol := p.text.FindAllString(lines[1], -1)
 	if len(symbol) < 2 {

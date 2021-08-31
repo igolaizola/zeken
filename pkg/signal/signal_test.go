@@ -92,6 +92,19 @@ Target 5: 330 % 60
 Stop Loss: 185 %.❌`,
 			wantErr: true,
 		},
+		{
+			name: "not supported exchanges",
+			msg: `🔥gate.io
+ZPT-USDT
+Entrada: 0.0009783
+Target 1: 0.0010566 % 8
+Target 2: 0.0011250 % 15
+Target 3: 0.0012229 % 25
+Target 4: 0.0013696 % 40
+Target 5: 0.0015653 % 60
+Stop Loss: 0.0008609`,
+			wantErr: true,
+		},
 	}
 
 	parser, err := NewParser()
