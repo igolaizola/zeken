@@ -127,7 +127,7 @@ func (t *Trader) Run(ctx context.Context) error {
 			continue
 		}
 		if err != nil {
-			t.log(err)
+			t.log(fmt.Sprintf("%v (%T)", err, err))
 			continue
 		}
 		t.lastPrice = price
@@ -200,11 +200,11 @@ func (t *Trader) status(ctx context.Context, id string) (bool, decimal.Decimal, 
 		}
 		ok, endQuoteQty, err := t.exchange.Status(ctx, t.symbol, id)
 		var netErr net.Error
-		if errors.As(err, &netErr) && netErr.Timeout() {
+		if errors.As(err, &netErr) && (netErr.Timeout() || netErr.Temporary()) {
 			continue
 		}
 		if err != nil {
-			return false, decimal.Decimal{}, fmt.Errorf("trade: couldn't get order status: %w", err)
+			return false, decimal.Decimal{}, fmt.Errorf("trade: couldn't get order status: %w (%T)", err, err)
 		}
 		return ok, endQuoteQty, nil
 	}
@@ -218,11 +218,11 @@ func (t *Trader) cancelStopLimit(ctx context.Context) error {
 		}
 		err := t.exchange.CancelStopLimit(ctx, t.symbol, t.OrderListID)
 		var netErr net.Error
-		if errors.As(err, &netErr) && netErr.Timeout() {
+		if errors.As(err, &netErr) && (netErr.Timeout() || netErr.Temporary()) {
 			continue
 		}
 		if err != nil {
-			return fmt.Errorf("trade: couldn't delete order list %s: %w", t.OrderListID, err)
+			return fmt.Errorf("trade: couldn't delete order list %s:  %w (%T)", t.OrderListID, err, err)
 		}
 		return nil
 	}
@@ -237,11 +237,11 @@ func (t *Trader) createStopLimit(ctx context.Context, upper, lower decimal.Decim
 		var err error
 		t.OrderListID, t.OrderIDs, err = t.exchange.CreateStopLimit(ctx, t.symbol, t.Quantity, upper, lower)
 		var netErr net.Error
-		if errors.As(err, &netErr) && netErr.Timeout() {
+		if errors.As(err, &netErr) && (netErr.Timeout() || netErr.Temporary()) {
 			continue
 		}
 		if err != nil {
-			return fmt.Errorf("trade: couldn't create order for %s: %w", t.symbol, err)
+			return fmt.Errorf("trade: couldn't create order for %s: %w (%T)", t.symbol, err, err)
 		}
 		return nil
 	}
@@ -255,11 +255,11 @@ func (t *Trader) buy(ctx context.Context) error {
 		}
 		quoteQty, qty, err := t.exchange.Buy(ctx, t.symbol, t.QuoteQuantity, t.StartPrice)
 		var netErr net.Error
-		if errors.As(err, &netErr) && netErr.Timeout() {
+		if errors.As(err, &netErr) && (netErr.Timeout() || netErr.Temporary()) {
 			continue
 		}
 		if err != nil {
-			return fmt.Errorf("trade: couldn't buy %s at price %s: %w", t.Base, t.StartPrice, err)
+			return fmt.Errorf("trade: couldn't buy %s at price %s: %w (%T)", t.Base, t.StartPrice, err, err)
 		}
 		t.QuoteQuantity = quoteQty
 		t.Quantity = qty
@@ -275,11 +275,11 @@ func (t *Trader) forceSell(ctx context.Context) error {
 		}
 		quoteQty, err := t.exchange.Sell(ctx, t.symbol, t.Quantity)
 		var netErr net.Error
-		if errors.As(err, &netErr) && netErr.Timeout() {
+		if errors.As(err, &netErr) && (netErr.Timeout() || netErr.Temporary()) {
 			continue
 		}
 		if err != nil {
-			return fmt.Errorf("trade: couldn't force sell %s: %w", t.Base, err)
+			return fmt.Errorf("trade: couldn't force sell %s: %w (%T)", t.Base, err, err)
 		}
 		t.EndQuoteQuantity = quoteQty
 		t.EndTime = time.Now().UTC()
