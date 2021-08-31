@@ -185,7 +185,26 @@ func (e *binanceExchange) buyLimit(ctx context.Context, symbol string, quoteQuan
 }
 
 func (e *binanceExchange) CreateStopLimit(ctx context.Context, symbol string, quantity, target, stop decimal.Decimal) (string, []string, error) {
-	limit := stop.Mul(decimal.NewFromFloat(0.99)).Round(4)
+	precision := decimalPrecision
+	info, err := e.client.NewExchangeInfoService().Symbol(symbol).Do(ctx)
+	if err != nil {
+		return "", nil, fmt.Errorf("binance: couldn't get exchange info for %s: %w", symbol, err)
+	}
+	for _, s := range info.Symbols {
+		if s.Symbol != symbol {
+			continue
+		}
+		priceFilter := s.PriceFilter()
+		split := strings.Split(priceFilter.TickSize, ".")
+		if len(split) != 2 {
+			return "", nil, errors.New("binance: couldn't parse step size %s")
+		}
+		precision = len(strings.TrimRight(split[1], "0"))
+	}
+	target = target.Round(int32(precision))
+	stop = stop.Round(int32(precision))
+	limit := stop.Mul(decimal.NewFromFloat(0.99)).Round(int32(precision))
+
 	order, err := e.client.NewCreateOCOService().Symbol(symbol).
 		Side(binance.SideTypeSell).
 		StopLimitTimeInForce(binance.TimeInForceTypeGTC).
