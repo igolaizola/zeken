@@ -48,9 +48,10 @@ type Trader struct {
 	exchange  exchange.Exchange
 	sell      chan struct{}
 	wait      time.Duration
+	update    func(t *Trade) error
 }
 
-func NewTrader(log func(v ...interface{}), ex exchange.Exchange, t *Trade, wait time.Duration) *Trader {
+func NewTrader(log func(v ...interface{}), ex exchange.Exchange, t *Trade, wait time.Duration, update func(t *Trade) error) *Trader {
 	return &Trader{
 		Trade:    t,
 		symbol:   ex.Symbol(t.Base, t.Quote),
@@ -58,6 +59,7 @@ func NewTrader(log func(v ...interface{}), ex exchange.Exchange, t *Trade, wait 
 		exchange: ex,
 		sell:     make(chan struct{}),
 		wait:     wait,
+		update:   update,
 	}
 }
 
@@ -70,6 +72,9 @@ func (t *Trader) Create(ctx context.Context) error {
 	if err := t.createStopLimit(ctx, upper, lower); err != nil {
 		defer t.log(fmt.Sprintf("⚠️ Warning! %s has been bought, but order creation failed. You must sell it manually", t.symbol))
 		return fmt.Errorf("trade: couldn't create order for %s: %w", t.symbol, err)
+	}
+	if err := t.update(t.Trade); err != nil {
+		t.log("trade: couldn't update %s: %w", t.Base, err)
 	}
 	return nil
 }
@@ -109,6 +114,9 @@ func (t *Trader) Run(ctx context.Context) error {
 			}
 			t.EndQuoteQuantity = endQuoteQty
 			t.EndTime = time.Now().UTC()
+			if err := t.update(t.Trade); err != nil {
+				t.log("trade: couldn't update %s: %w", t.Base, err)
+			}
 			return nil
 		}
 
@@ -137,6 +145,9 @@ func (t *Trader) Run(ctx context.Context) error {
 				t.log(err)
 				continue
 			}
+			if err := t.update(t.Trade); err != nil {
+				t.log("trade: couldn't update %s: %w", t.Base, err)
+			}
 			return nil
 		}
 
@@ -161,6 +172,9 @@ func (t *Trader) Run(ctx context.Context) error {
 		t.log(fmt.Sprintf("✔️ %s reached target %d", t.Base, t.CurrentTarget))
 		if err := t.createStopLimit(ctx, upper, lower); err != nil {
 			return err
+		}
+		if err := t.update(t.Trade); err != nil {
+			t.log("trade: couldn't update %s: %w", t.Base, err)
 		}
 		canceled = false
 	}

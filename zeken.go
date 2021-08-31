@@ -129,7 +129,7 @@ func (b *Bot) resume() error {
 	}
 	for _, tr := range trades {
 		tr := tr
-		trader := trade.NewTrader(b.log, b.exchange, tr, 5*time.Second)
+		trader := trade.NewTrader(b.log, b.exchange, tr, 5*time.Second, b.store.Update)
 		b.lock.Lock()
 		b.trades[tr.Base] = trader
 		b.lock.Unlock()
@@ -182,7 +182,7 @@ func (b *Bot) signal(sig *signal.Signal) error {
 	}
 
 	tr := trade.New(sig.Base, sig.Quote, sig.Start, sig.Targets, sig.Stop, quoteQty)
-	trader := trade.NewTrader(b.log, b.exchange, tr, 5*time.Second)
+	trader := trade.NewTrader(b.log, b.exchange, tr, 5*time.Second, b.store.Update)
 	b.trades[tr.Base] = trader
 
 	go func() {
@@ -203,9 +203,6 @@ func (b *Bot) trade(t *trade.Trader, new bool) {
 			b.log(err)
 			return
 		}
-		if err := b.store.Update(t.Trade); err != nil {
-			b.log(fmt.Errorf("zeken: couldn't update trade: %w", err))
-		}
 	}
 	err := t.Run(b.ctx)
 	if err != nil {
@@ -222,9 +219,6 @@ func (b *Bot) trade(t *trade.Trader, new bool) {
 		return
 	}
 
-	if err := b.store.Update(t.Trade); err != nil {
-		b.log(fmt.Errorf("zeken: couldn't update trade: %w", err))
-	}
 	profit, perc, elapsed := t.Status()
 	emoji := "💰"
 	if profit.LessThan(decimal.Zero) {
