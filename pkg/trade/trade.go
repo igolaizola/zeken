@@ -224,6 +224,8 @@ func (t *Trader) cancelStopLimit(ctx context.Context) error {
 		if err != nil {
 			return fmt.Errorf("trade: couldn't delete order list %s:  %w (%T)", t.OrderListID, err, err)
 		}
+		t.OrderListID = ""
+		t.OrderIDs = nil
 		return nil
 	}
 }
@@ -234,8 +236,7 @@ func (t *Trader) createStopLimit(ctx context.Context, upper, lower decimal.Decim
 		case <-ctx.Done():
 		default:
 		}
-		var err error
-		t.OrderListID, t.OrderIDs, err = t.exchange.CreateStopLimit(ctx, t.symbol, t.Quantity, upper, lower)
+		orderListID, orderIDs, err := t.exchange.CreateStopLimit(ctx, t.symbol, t.Quantity, upper, lower)
 		var netErr net.Error
 		if errors.As(err, &netErr) && (netErr.Timeout() || netErr.Temporary()) {
 			continue
@@ -243,6 +244,8 @@ func (t *Trader) createStopLimit(ctx context.Context, upper, lower decimal.Decim
 		if err != nil {
 			return fmt.Errorf("trade: couldn't create order for %s: %w (%T)", t.symbol, err, err)
 		}
+		t.OrderListID = orderListID
+		t.OrderIDs = orderIDs
 		return nil
 	}
 }
