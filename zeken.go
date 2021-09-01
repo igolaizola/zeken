@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"sort"
+	"strings"
 	"sync"
 	"time"
 
@@ -77,10 +79,29 @@ func NewBot(dbPath, apiKey, apiSecret, token string, controlChatID, signalChatID
 			b.log("no trades running")
 			return
 		}
+
+		// Sort trades by start time
+		var trades []*trade.Trader
 		for _, t := range b.trades {
-			profit, perc, elapsed := t.Status()
-			b.log(fmt.Sprintf("📈 %s %s%% %s %s %s", t.Base, perc.Mul(decimal.NewFromInt(100)).StringFixed(2), profit.StringFixed(2), t.Quote, elapsed.Round(time.Second)))
+			trades = append(trades, t)
 		}
+		sort.Slice(trades, func(i, j int) bool {
+			return trades[i].StartTime.Before(trades[j].StartTime)
+		})
+
+		sb := &strings.Builder{}
+		totalProfit := decimal.Zero
+		for _, t := range trades {
+			profit, perc, elapsed := t.Status()
+			totalProfit = totalProfit.Add(profit)
+			emoji := "📈"
+			if profit.LessThan(decimal.Zero) {
+				emoji = "📉"
+			}
+			fmt.Fprintf(sb, "%s %s %s%% %s %s %s\n", emoji, t.Base, perc.Mul(decimal.NewFromInt(100)).StringFixed(2), profit.StringFixed(2), t.Quote, elapsed.Round(time.Second))
+		}
+		fmt.Fprintf(sb, "Total: %s %s", totalProfit.StringFixed(2), b.currency)
+		b.log(sb.String())
 	})
 	tgbot.HandleCommand("sell", func(msg string) {
 		t, ok := b.trades[msg]
