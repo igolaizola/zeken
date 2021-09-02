@@ -18,7 +18,7 @@ import (
 	"github.com/shopspring/decimal"
 )
 
-var version = "v210831a"
+var version = "v210901a"
 
 type Bot struct {
 	run          func(context.Context) error

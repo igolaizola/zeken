@@ -85,11 +85,7 @@ func (t *Trader) Run(ctx context.Context) error {
 	previous := t.StartPrice
 	target := t.Targets[t.CurrentTarget]
 
-	// Don't wait ticker time on first run
-	closedTick := make(chan time.Time)
-	close(closedTick)
-	tick := (<-chan time.Time)(closedTick)
-	ticker := time.NewTicker(t.wait)
+	tick, update := ticker(t.wait)
 
 	var canceled bool
 	var forceSell bool
@@ -101,7 +97,7 @@ func (t *Trader) Run(ctx context.Context) error {
 		case <-t.sell:
 			forceSell = true
 		}
-		tick = ticker.C
+		tick = update
 
 		// Check if orders have been completed
 		for _, id := range t.OrderIDs {
@@ -193,10 +189,14 @@ func (t *Trader) Sell() {
 }
 
 func (t *Trader) status(ctx context.Context, id string) (bool, decimal.Decimal, error) {
+	var nerr int
+	tick, update := ticker(5 * time.Second)
 	for {
 		select {
 		case <-ctx.Done():
-		default:
+			return false, decimal.Decimal{}, ctx.Err()
+		case <-tick:
+			tick = update
 		}
 		ok, endQuoteQty, err := t.exchange.Status(ctx, t.symbol, id)
 		var netErr net.Error
@@ -204,17 +204,27 @@ func (t *Trader) status(ctx context.Context, id string) (bool, decimal.Decimal, 
 			continue
 		}
 		if err != nil {
-			return false, decimal.Decimal{}, fmt.Errorf("trade: couldn't get order status: %w (%T)", err, err)
+			err := fmt.Errorf("trade: couldn't get order status: %w", err)
+			nerr++
+			if nerr > 100 {
+				return false, decimal.Decimal{}, err
+			}
+			t.log(err, "retrying...")
+			continue
 		}
 		return ok, endQuoteQty, nil
 	}
 }
 
 func (t *Trader) cancelStopLimit(ctx context.Context) error {
+	var nerr int
+	tick, update := ticker(5 * time.Second)
 	for {
 		select {
 		case <-ctx.Done():
-		default:
+			return ctx.Err()
+		case <-tick:
+			tick = update
 		}
 		err := t.exchange.CancelStopLimit(ctx, t.symbol, t.OrderListID)
 		var netErr net.Error
@@ -222,7 +232,13 @@ func (t *Trader) cancelStopLimit(ctx context.Context) error {
 			continue
 		}
 		if err != nil {
-			return fmt.Errorf("trade: couldn't delete order list %s:  %w (%T)", t.OrderListID, err, err)
+			err := fmt.Errorf("trade: couldn't delete order list %s:  %w", t.OrderListID, err)
+			nerr++
+			if nerr > 100 {
+				return err
+			}
+			t.log(err, "retrying...")
+			continue
 		}
 		t.OrderListID = ""
 		t.OrderIDs = nil
@@ -231,10 +247,14 @@ func (t *Trader) cancelStopLimit(ctx context.Context) error {
 }
 
 func (t *Trader) createStopLimit(ctx context.Context, upper, lower decimal.Decimal) error {
+	var nerr int
+	tick, update := ticker(5 * time.Second)
 	for {
 		select {
 		case <-ctx.Done():
-		default:
+			return ctx.Err()
+		case <-tick:
+			tick = update
 		}
 		orderListID, orderIDs, err := t.exchange.CreateStopLimit(ctx, t.symbol, t.Quantity, upper, lower)
 		var netErr net.Error
@@ -242,7 +262,13 @@ func (t *Trader) createStopLimit(ctx context.Context, upper, lower decimal.Decim
 			continue
 		}
 		if err != nil {
-			return fmt.Errorf("trade: couldn't create order for %s: %w (%T)", t.symbol, err, err)
+			err := fmt.Errorf("trade: couldn't create order for %s: %w", t.symbol, err)
+			nerr++
+			if nerr > 100 {
+				return err
+			}
+			t.log(err, "retrying...")
+			continue
 		}
 		t.OrderListID = orderListID
 		t.OrderIDs = orderIDs
@@ -251,10 +277,14 @@ func (t *Trader) createStopLimit(ctx context.Context, upper, lower decimal.Decim
 }
 
 func (t *Trader) buy(ctx context.Context) error {
+	var nerr int
+	tick, update := ticker(5 * time.Second)
 	for {
 		select {
 		case <-ctx.Done():
-		default:
+			return ctx.Err()
+		case <-tick:
+			tick = update
 		}
 		quoteQty, qty, err := t.exchange.Buy(ctx, t.symbol, t.QuoteQuantity, t.StartPrice)
 		var netErr net.Error
@@ -262,7 +292,13 @@ func (t *Trader) buy(ctx context.Context) error {
 			continue
 		}
 		if err != nil {
-			return fmt.Errorf("trade: couldn't buy %s at price %s: %w (%T)", t.Base, t.StartPrice, err, err)
+			err := fmt.Errorf("trade: couldn't buy %s at price %s: %w", t.Base, t.StartPrice, err)
+			nerr++
+			if nerr > 100 {
+				return err
+			}
+			t.log(err, "retrying...")
+			continue
 		}
 		t.QuoteQuantity = quoteQty
 		t.Quantity = qty
@@ -271,10 +307,14 @@ func (t *Trader) buy(ctx context.Context) error {
 }
 
 func (t *Trader) forceSell(ctx context.Context) error {
+	var nerr int
+	tick, update := ticker(5 * time.Second)
 	for {
 		select {
 		case <-ctx.Done():
-		default:
+			return ctx.Err()
+		case <-tick:
+			tick = update
 		}
 		quoteQty, err := t.exchange.Sell(ctx, t.symbol, t.Quantity)
 		var netErr net.Error
@@ -282,10 +322,25 @@ func (t *Trader) forceSell(ctx context.Context) error {
 			continue
 		}
 		if err != nil {
-			return fmt.Errorf("trade: couldn't force sell %s: %w (%T)", t.Base, err, err)
+			err := fmt.Errorf("trade: couldn't force sell %s: %w (%T)", t.Base, err, err)
+			nerr++
+			if nerr > 100 {
+				return err
+			}
+			t.log(err, "retrying...")
+			continue
 		}
 		t.EndQuoteQuantity = quoteQty
 		t.EndTime = time.Now().UTC()
 		return nil
 	}
+}
+
+func ticker(wait time.Duration) (<-chan time.Time, <-chan time.Time) {
+	// Don't wait ticker time on first run
+	closedTick := make(chan time.Time)
+	close(closedTick)
+	tick := (<-chan time.Time)(closedTick)
+	ticker := time.NewTicker(wait)
+	return tick, ticker.C
 }

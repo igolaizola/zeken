@@ -81,7 +81,7 @@ func (e *binanceExchange) Sell(ctx context.Context, symbol string, quantity deci
 		}
 		ok, quoteQty, _, err := e.getOrder(ctx, symbol, strconv.Itoa(int(id)))
 		var netErr net.Error
-		if errors.As(err, &netErr) {
+		if errors.As(err, &netErr) && netErr.Timeout() {
 			continue
 		}
 		if err != nil {
