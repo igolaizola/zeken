@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"sort"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -18,7 +19,7 @@ import (
 	"github.com/shopspring/decimal"
 )
 
-var version = "v210901a"
+var version = "v210907a"
 
 type Bot struct {
 	run          func(context.Context) error
@@ -111,6 +112,29 @@ func NewBot(dbPath, apiKey, apiSecret, token string, controlChatID, signalChatID
 		}
 		b.log(fmt.Sprintf("selling %s", msg))
 		t.Sell()
+	})
+	tgbot.HandleCommand("history", func(msg string) {
+		days := 365
+		if msg != "" {
+			var err error
+			days, err = strconv.Atoi(msg)
+			if err != nil {
+				b.log("couldn't parse %s: %v", msg, err)
+				return
+			}
+		}
+		from := time.Now().Add(-1 * time.Duration(days) * 24 * time.Hour)
+		to := time.Now()
+		trades, err := b.store.List(from, to, true)
+		if err != nil {
+			b.log("couldn't list trades: %v", err)
+			return
+		}
+		profit := decimal.Zero
+		for _, t := range trades {
+			profit = profit.Add(t.EndQuoteQuantity.Sub(t.QuoteQuantity))
+		}
+		b.log(fmt.Sprintf("Last %d days profit: %s %s", days, profit.StringFixed(2), b.currency))
 	})
 	tgbot.HandleCommand("shutdown", func(_ string) {
 		b.log("shutting down")
