@@ -41,6 +41,32 @@ Stop Loss: 0.30044`,
 			},
 		},
 		{
+			name: "valid trade with commas",
+			msg: `🔥BINANCE
+TFUEL-USDT
+Entrada: 0,34141
+Target 1: 0,36872 % 8
+Target 2: 0,39262 % 15
+Target 3: 0,42676 % 25
+Target 4: 0,47797 % 40
+Target 5: 0,54626 % 60
+Stop Loss: 0,30044`,
+			want: &Signal{
+				Exchanges: []string{"BINANCE"},
+				Base:      "TFUEL",
+				Quote:     "USDT",
+				Start:     toDecimal("0.34141"),
+				Targets: []decimal.Decimal{
+					toDecimal("0.36872"),
+					toDecimal("0.39262"),
+					toDecimal("0.42676"),
+					toDecimal("0.47797"),
+					toDecimal("0.54626"),
+				},
+				Stop: toDecimal("0.30044"),
+			},
+		},
+		{
 			name: "multiple exchanges",
 			msg: `🚨BINANCE / FTX
 SOL / USDT

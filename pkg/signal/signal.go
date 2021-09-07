@@ -32,7 +32,7 @@ func NewParser() (Parser, error) {
 	if err != nil {
 		return nil, fmt.Errorf("signal: couldn't create regex: %w", err)
 	}
-	nums, err := regexp.Compile(`(?::|;)\s+([0-9]+(?:.[0-9]+)?)`)
+	nums, err := regexp.Compile(`(?::|;)\s+([0-9]+(?:(?:.|,)[0-9]+)?)`)
 	if err != nil {
 		return nil, fmt.Errorf("signal: couldn't create regex: %w", err)
 	}
@@ -74,7 +74,7 @@ func (p *parser) Parse(text string) (*Signal, error) {
 		if len(matches) < 2 {
 			return nil, fmt.Errorf("price not found in line: %s", line)
 		}
-		match := matches[1]
+		match := strings.Replace(matches[1], ",", ".", 1)
 		price, err := decimal.NewFromString(match)
 		if err != nil {
 			return nil, fmt.Errorf("couldn't parse price %s: %w", match, err)
