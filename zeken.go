@@ -130,11 +130,22 @@ func NewBot(dbPath, apiKey, apiSecret, token string, controlChatID, signalChatID
 			b.log("couldn't list trades: %v", err)
 			return
 		}
-		profit := decimal.Zero
+
+		// Sort trades by start time
+		sort.Slice(trades, func(i, j int) bool {
+			return trades[i].StartTime.Before(trades[j].StartTime)
+		})
+
+		totalProfit := decimal.Zero
+		sb := &strings.Builder{}
+		fmt.Fprintf(sb, "Last %d days:\n", days)
 		for _, t := range trades {
-			profit = profit.Add(t.EndQuoteQuantity.Sub(t.QuoteQuantity))
+			profit := t.EndQuoteQuantity.Sub(t.QuoteQuantity)
+			fmt.Fprintf(sb, "%s: %s %s\n", t.Base, profit.StringFixed(2), b.currency)
+			totalProfit = totalProfit.Add(profit)
 		}
-		b.log(fmt.Sprintf("Last %d days profit: %s %s", days, profit.StringFixed(2), b.currency))
+		fmt.Fprintf(sb, "Total: %s %s\n", totalProfit.StringFixed(2), b.currency)
+		b.log(sb.String())
 	})
 	tgbot.HandleCommand("shutdown", func(_ string) {
 		b.log("shutting down")
