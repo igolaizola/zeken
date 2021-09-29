@@ -47,19 +47,21 @@ type Trader struct {
 	log       func(v ...interface{})
 	exchange  exchange.Exchange
 	sell      chan struct{}
+	maxTarget int
 	wait      time.Duration
 	update    func(t *Trade) error
 }
 
-func NewTrader(log func(v ...interface{}), ex exchange.Exchange, t *Trade, wait time.Duration, update func(t *Trade) error) *Trader {
+func NewTrader(log func(v ...interface{}), ex exchange.Exchange, t *Trade, maxTarget int, wait time.Duration, update func(t *Trade) error) *Trader {
 	return &Trader{
-		Trade:    t,
-		symbol:   ex.Symbol(t.Base, t.Quote),
-		log:      log,
-		exchange: ex,
-		sell:     make(chan struct{}),
-		wait:     wait,
-		update:   update,
+		Trade:     t,
+		symbol:    ex.Symbol(t.Base, t.Quote),
+		log:       log,
+		exchange:  ex,
+		sell:      make(chan struct{}),
+		maxTarget: maxTarget,
+		wait:      wait,
+		update:    update,
 	}
 }
 
@@ -153,7 +155,7 @@ func (t *Trader) Run(ctx context.Context) error {
 		}
 
 		// This was the last target
-		if t.CurrentTarget == len(t.Targets)-1 {
+		if t.CurrentTarget >= t.maxTarget || t.CurrentTarget >= len(t.Targets)-1 {
 			continue
 		}
 

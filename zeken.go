@@ -19,7 +19,7 @@ import (
 	"github.com/shopspring/decimal"
 )
 
-var version = "v210907a"
+var version = "v210929a"
 
 type Bot struct {
 	run          func(context.Context) error
@@ -29,6 +29,7 @@ type Bot struct {
 	log          func(v ...interface{})
 	parser       signal.Parser
 	maxTrades    int
+	maxTarget    int
 	balanceRatio float64
 	trades       map[string]*trade.Trader
 	lock         sync.Mutex
@@ -37,7 +38,7 @@ type Bot struct {
 	dry          bool
 }
 
-func NewBot(dbPath, apiKey, apiSecret, token string, controlChatID, signalChatID, maxTrades int, balanceRatio float64, currency string, dry, debug bool) (*Bot, error) {
+func NewBot(dbPath, apiKey, apiSecret, token string, controlChatID, signalChatID, maxTrades, maxTarget int, balanceRatio float64, currency string, dry, debug bool) (*Bot, error) {
 	tgbot, err := telegram.New(token, controlChatID)
 	if err != nil {
 		return nil, fmt.Errorf("zeken: couldn't create telegram bot: %w", err)
@@ -65,6 +66,7 @@ func NewBot(dbPath, apiKey, apiSecret, token string, controlChatID, signalChatID
 		exchange:     ex,
 		parser:       parser,
 		maxTrades:    maxTrades,
+		maxTarget:    maxTarget,
 		balanceRatio: balanceRatio,
 		trades:       make(map[string]*trade.Trader),
 		lock:         sync.Mutex{},
@@ -185,7 +187,7 @@ func (b *Bot) resume() error {
 	}
 	for _, tr := range trades {
 		tr := tr
-		trader := trade.NewTrader(b.log, b.exchange, tr, 5*time.Second, b.store.Update)
+		trader := trade.NewTrader(b.log, b.exchange, tr, b.maxTarget, 5*time.Second, b.store.Update)
 		b.lock.Lock()
 		b.trades[tr.Base] = trader
 		b.lock.Unlock()
@@ -238,7 +240,7 @@ func (b *Bot) signal(sig *signal.Signal) error {
 	}
 
 	tr := trade.New(sig.Base, sig.Quote, sig.Start, sig.Targets, sig.Stop, quoteQty)
-	trader := trade.NewTrader(b.log, b.exchange, tr, 5*time.Second, b.store.Update)
+	trader := trade.NewTrader(b.log, b.exchange, tr, b.maxTarget, 5*time.Second, b.store.Update)
 	b.trades[tr.Base] = trader
 
 	go func() {

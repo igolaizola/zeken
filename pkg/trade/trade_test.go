@@ -27,7 +27,7 @@ func TestOrderCompleted(t *testing.T) {
 		inc:   decimal.NewFromFloat(1.0),
 	}
 
-	trader := NewTrader(log.Println, ex, tr, 10*time.Millisecond, func(t *Trade) error { return nil })
+	trader := NewTrader(log.Println, ex, tr, 5, 10*time.Millisecond, func(t *Trade) error { return nil })
 	if err := trader.Create(context.Background()); err != nil {
 		t.Fatal(err)
 	}
@@ -65,7 +65,7 @@ func TestForceSell(t *testing.T) {
 		inc:       decimal.NewFromFloat(1.0),
 	}
 
-	trader := NewTrader(log.Println, ex, tr, 10*time.Millisecond, func(t *Trade) error { return nil })
+	trader := NewTrader(log.Println, ex, tr, 5, 10*time.Millisecond, func(t *Trade) error { return nil })
 	if err := trader.Create(context.Background()); err != nil {
 		t.Fatal(err)
 	}

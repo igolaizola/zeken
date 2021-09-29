@@ -63,6 +63,7 @@ func newServeCommand() *ffcli.Command {
 	controlChat := fs.Int("telegram-control-chat", 0, "telegram chat id for logs and commands")
 	signalChat := fs.Int("telegram-signal-chat", 0, "telegram chat id to read signals")
 	maxTrades := fs.Int("max-trades", 5, "max simultaneus trades")
+	maxTarget := fs.Int("max-target", 5, "max target to sell")
 	balance := fs.Float64("balance-ratio", 0.99, "balance ratio to be used")
 	currency := fs.String("currency", "USDT", "quote currency")
 	dry := fs.Bool("dry", false, "enable dry mode")
@@ -105,7 +106,7 @@ func newServeCommand() *ffcli.Command {
 			if *currency == "" {
 				return errors.New("missing currency")
 			}
-			bot, err := zeken.NewBot(*db, *key, *secret, *token, *controlChat, *signalChat, *maxTrades, *balance, *currency, *dry, *debug)
+			bot, err := zeken.NewBot(*db, *key, *secret, *token, *controlChat, *signalChat, *maxTrades, *maxTarget, *balance, *currency, *dry, *debug)
 			if err != nil {
 				return err
 			}
