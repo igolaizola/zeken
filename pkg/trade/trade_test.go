@@ -17,6 +17,7 @@ func TestOrderCompleted(t *testing.T) {
 		decimal.NewFromFloat(13.0),
 		decimal.NewFromFloat(14.0),
 		decimal.NewFromFloat(15.0),
+		decimal.NewFromFloat(16.0),
 	}
 	startPrice := decimal.NewFromFloat(10.0)
 	quoteQty := decimal.NewFromFloat(100.0)
@@ -54,6 +55,7 @@ func TestForceSell(t *testing.T) {
 		decimal.NewFromFloat(13.0),
 		decimal.NewFromFloat(14.0),
 		decimal.NewFromFloat(15.0),
+		decimal.NewFromFloat(16.0),
 	}
 	startPrice := decimal.NewFromFloat(10.0)
 	quoteQty := decimal.NewFromFloat(100.0)

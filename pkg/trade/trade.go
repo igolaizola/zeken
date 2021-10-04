@@ -83,7 +83,11 @@ func (t *Trader) Create(ctx context.Context) error {
 
 func (t *Trader) Run(ctx context.Context) error {
 	lower := t.StopPrice
-	upper := t.Targets[len(t.Targets)-1]
+	idx := len(t.Targets) - 1
+	if t.maxTarget-1 < idx {
+		idx = t.maxTarget - 1
+	}
+	upper := t.Targets[idx]
 	previous := t.StartPrice
 	target := t.Targets[t.CurrentTarget]
 
@@ -155,7 +159,7 @@ func (t *Trader) Run(ctx context.Context) error {
 		}
 
 		// This was the last target
-		if t.CurrentTarget >= t.maxTarget || t.CurrentTarget >= len(t.Targets)-1 {
+		if t.CurrentTarget >= t.maxTarget-1 || t.CurrentTarget >= len(t.Targets)-1 {
 			continue
 		}
 
