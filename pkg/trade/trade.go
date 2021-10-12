@@ -106,14 +106,11 @@ func (t *Trader) Run(ctx context.Context) error {
 		tick = update
 
 		// Check if orders have been completed
-		for _, id := range t.OrderIDs {
-			ok, endQuoteQty, err := t.status(ctx, id)
-			if err != nil {
-				return err
-			}
-			if !ok {
-				continue
-			}
+		ok, endQuoteQty, err := t.status(ctx, t.OrderIDs)
+		if err != nil {
+			return err
+		}
+		if ok {
 			t.EndQuoteQuantity = endQuoteQty
 			t.EndTime = time.Now().UTC()
 			if err := t.update(t.Trade); err != nil {
@@ -194,23 +191,32 @@ func (t *Trader) Sell() {
 	close(t.sell)
 }
 
-func (t *Trader) status(ctx context.Context, id string) (bool, decimal.Decimal, error) {
+func (t *Trader) status(ctx context.Context, ids []string) (bool, decimal.Decimal, error) {
 	var nerr int
 	tick, update := ticker(5 * time.Second)
 	for {
-		select {
-		case <-ctx.Done():
-			return false, decimal.Decimal{}, ctx.Err()
-		case <-tick:
-			tick = update
+		var statusErr error
+		for _, id := range ids {
+			select {
+			case <-ctx.Done():
+				return false, decimal.Decimal{}, ctx.Err()
+			case <-tick:
+				tick = update
+			}
+			ok, endQuoteQty, err := t.exchange.Status(ctx, t.symbol, id)
+			if err != nil {
+				statusErr = err
+			}
+			if ok {
+				return true, endQuoteQty, nil
+			}
 		}
-		ok, endQuoteQty, err := t.exchange.Status(ctx, t.symbol, id)
 		var netErr net.Error
-		if errors.As(err, &netErr) && (netErr.Timeout() || netErr.Temporary()) {
+		if errors.As(statusErr, &netErr) && (netErr.Timeout() || netErr.Temporary()) {
 			continue
 		}
-		if err != nil {
-			err := fmt.Errorf("trade: couldn't get order status: %w", err)
+		if statusErr != nil {
+			err := fmt.Errorf("trade: couldn't get order status: %w", statusErr)
 			nerr++
 			if nerr > 100 {
 				return false, decimal.Decimal{}, err
@@ -218,7 +224,7 @@ func (t *Trader) status(ctx context.Context, id string) (bool, decimal.Decimal, 
 			t.log(err, "retrying...")
 			continue
 		}
-		return ok, endQuoteQty, nil
+		return false, decimal.Decimal{}, nil
 	}
 }
 
