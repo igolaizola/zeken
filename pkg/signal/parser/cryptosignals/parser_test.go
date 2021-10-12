@@ -1,9 +1,10 @@
-package signal
+package cryptosignals
 
 import (
 	"reflect"
 	"testing"
 
+	"github.com/igolaizola/zeken/pkg/signal"
 	"github.com/shopspring/decimal"
 )
 
@@ -11,7 +12,7 @@ func TestParse(t *testing.T) {
 	tests := []struct {
 		name    string
 		msg     string
-		want    *Signal
+		want    *signal.Signal
 		wantErr bool
 	}{
 		{
@@ -25,7 +26,7 @@ Target 3: 0.42676 % 25
 Target 4: 0.47797 % 40
 Target 5: 0.54626 % 60
 Stop Loss: 0.30044`,
-			want: &Signal{
+			want: &signal.Signal{
 				Exchanges: []string{"BINANCE"},
 				Base:      "TFUEL",
 				Quote:     "USDT",
@@ -51,7 +52,7 @@ Target 3: 0,42676 % 25
 Target 4: 0,47797 % 40
 Target 5: 0,54626 % 60
 Stop Loss: 0,30044`,
-			want: &Signal{
+			want: &signal.Signal{
 				Exchanges: []string{"BINANCE"},
 				Base:      "TFUEL",
 				Quote:     "USDT",
@@ -77,7 +78,7 @@ Target 3: 44.9 % 25
 Target 4: 50.3 % 40
 Target 5: 57.4 % 60
 Stop Loss: 31`,
-			want: &Signal{
+			want: &signal.Signal{
 				Exchanges: []string{"BINANCE", "FTX"},
 				Base:      "SOL",
 				Quote:     "USDT",

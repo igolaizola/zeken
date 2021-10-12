@@ -13,13 +13,14 @@ import (
 	"github.com/igolaizola/zeken/pkg/exchange"
 	"github.com/igolaizola/zeken/pkg/exchange/binance"
 	"github.com/igolaizola/zeken/pkg/signal"
+	"github.com/igolaizola/zeken/pkg/signal/parser"
 	"github.com/igolaizola/zeken/pkg/telegram"
 	"github.com/igolaizola/zeken/pkg/trade"
 	"github.com/igolaizola/zeken/pkg/trade/bolt"
 	"github.com/shopspring/decimal"
 )
 
-var version = "v210929a"
+var version = "v211008a"
 
 type Bot struct {
 	run          func(context.Context) error
@@ -38,7 +39,7 @@ type Bot struct {
 	dry          bool
 }
 
-func NewBot(dbPath, apiKey, apiSecret, token string, controlChatID, signalChatID, maxTrades, maxTarget int, balanceRatio float64, currency string, dry, debug bool) (*Bot, error) {
+func NewBot(dbPath, apiKey, apiSecret, token, parserName string, controlChatID, signalChatID, maxTrades, maxTarget int, balanceRatio float64, currency string, dry, debug bool) (*Bot, error) {
 	tgbot, err := telegram.New(token, controlChatID)
 	if err != nil {
 		return nil, fmt.Errorf("zeken: couldn't create telegram bot: %w", err)
@@ -51,9 +52,9 @@ func NewBot(dbPath, apiKey, apiSecret, token string, controlChatID, signalChatID
 		ex = binance.New(log, apiKey, apiSecret, debug)
 	}
 
-	parser, err := signal.NewParser()
+	signalParser, err := parser.NewParser(parserName)
 	if err != nil {
-		return nil, fmt.Errorf("zeken: couldn't create parser: %w", err)
+		return nil, fmt.Errorf("zeken: couldn't create parser %s: %w", parserName, err)
 	}
 	store, err := bolt.New(dbPath)
 	if err != nil {
@@ -64,7 +65,7 @@ func NewBot(dbPath, apiKey, apiSecret, token string, controlChatID, signalChatID
 		run:          tgbot.Run,
 		log:          log,
 		exchange:     ex,
-		parser:       parser,
+		parser:       signalParser,
 		maxTrades:    maxTrades,
 		maxTarget:    maxTarget,
 		balanceRatio: balanceRatio,

@@ -57,6 +57,7 @@ func newServeCommand() *ffcli.Command {
 	_ = fs.String("config", "", "config file (optional)")
 
 	db := fs.String("db", "zeken.db", "database path")
+	parser := fs.String("parser", "json", "signal parser name")
 	key := fs.String("exchange-key", "", "binance api key")
 	secret := fs.String("exchange-secret", "", "binance api secret")
 	token := fs.String("telegram-token", "", "telegram token")
@@ -106,7 +107,7 @@ func newServeCommand() *ffcli.Command {
 			if *currency == "" {
 				return errors.New("missing currency")
 			}
-			bot, err := zeken.NewBot(*db, *key, *secret, *token, *controlChat, *signalChat, *maxTrades, *maxTarget, *balance, *currency, *dry, *debug)
+			bot, err := zeken.NewBot(*db, *key, *secret, *token, *parser, *controlChat, *signalChat, *maxTrades, *maxTarget, *balance, *currency, *dry, *debug)
 			if err != nil {
 				return err
 			}
