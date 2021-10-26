@@ -40,16 +40,22 @@ This is the ID of the chat that will contain your trading signals. If the chat i
 
 You need to install golang in order to build source code: https://golang.org/dl/
 
-Build source code for your running environment
-
-```
-make build
-```
-
 Build source code for multiple OS and architectures:
 
 ```
-make all
+make app-build
+```
+
+Build docker images:
+
+```
+make docker-build
+```
+
+Build docker images using `docker buildx`:
+
+```
+make docker-buildx
 ```
 
 ## Running the bot
