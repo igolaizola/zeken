@@ -12,6 +12,7 @@ import (
 
 	"github.com/igolaizola/zeken/pkg/exchange"
 	"github.com/igolaizola/zeken/pkg/exchange/binance"
+	"github.com/igolaizola/zeken/pkg/mtproto"
 	"github.com/igolaizola/zeken/pkg/signal"
 	"github.com/igolaizola/zeken/pkg/signal/parser"
 	"github.com/igolaizola/zeken/pkg/telegram"
@@ -35,11 +36,14 @@ type Bot struct {
 	trades       map[string]*trade.Trader
 	lock         sync.Mutex
 	store        trade.Store
+	mtListener   mtproto.Listener
 	currency     string
 	dry          bool
 }
 
-func NewBot(dbPath, apiKey, apiSecret, proxy, token, parserName string, controlChatID, signalChatID, maxTrades, maxTarget int, balanceRatio float64, currency string, dry, debug bool) (*Bot, error) {
+func NewBot(dbPath, apiKey, apiSecret, proxy, token, parserName string, controlChatID, signalChatID int,
+	mtID int, mtHash string, mtPhone string, mtSession string, mtChatID int64,
+	maxTrades, maxTarget int, balanceRatio float64, currency string, dry, debug bool) (*Bot, error) {
 	tgbot, err := telegram.New(token, controlChatID)
 	if err != nil {
 		return nil, fmt.Errorf("zeken: couldn't create telegram bot: %w", err)
@@ -60,6 +64,7 @@ func NewBot(dbPath, apiKey, apiSecret, proxy, token, parserName string, controlC
 	if err != nil {
 		return nil, fmt.Errorf("zeken: couldn't create db: %w", err)
 	}
+
 	b := &Bot{
 		ctx:          context.TODO(),
 		run:          tgbot.Run,
@@ -154,6 +159,32 @@ func NewBot(dbPath, apiKey, apiSecret, proxy, token, parserName string, controlC
 		b.log("shutting down")
 		b.shutdown()
 	})
+
+	// MTProto listener
+	if mtID > 0 {
+		code := make(chan string)
+		tgbot.HandleCommand("code", func(msg string) {
+			code <- msg
+		})
+		mtListener := mtproto.New(mtID, mtHash, mtPhone, mtSession, mtChatID, b.log, b.handle, func(ctx context.Context) string {
+			b.log("enter the authentication code you just received using /code your-code-here")
+			select {
+			case <-ctx.Done():
+				return ""
+			case c := <-code:
+				return c
+			}
+		})
+		b.run = func(ctx context.Context) error {
+			go func() {
+				if err := mtListener.Listen(ctx); err != nil {
+					b.log(fmt.Errorf("zeken: couldn't run mtproto listener: %w", err))
+				}
+			}()
+			return tgbot.Run(ctx)
+		}
+	}
+
 	return b, nil
 }
 

@@ -19,3 +19,4 @@
 *.conf
 *.db
 bin
+*.session

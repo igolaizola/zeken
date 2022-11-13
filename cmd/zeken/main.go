@@ -64,6 +64,11 @@ func newServeCommand() *ffcli.Command {
 	token := fs.String("telegram-token", "", "telegram token")
 	controlChat := fs.Int("telegram-control-chat", 0, "telegram chat id for logs and commands")
 	signalChat := fs.Int("telegram-signal-chat", 0, "telegram chat id to read signals")
+	mtID := fs.Int("mt-id", 0, "mtproto app id")
+	mtHash := fs.String("mt-hash", "", "mtproto app hash")
+	mtPhone := fs.String("mt-phone", "", "mtproto phone number")
+	mtSession := fs.String("mt-session", "", "mtproto session file")
+	mtChat := fs.Int64("mt-chat", 0, "mtproto chat id to read signals")
 	maxTrades := fs.Int("max-trades", 5, "max simultaneus trades")
 	maxTarget := fs.Int("max-target", 5, "max target to sell")
 	balance := fs.Float64("balance-ratio", 0.99, "balance ratio to be used")
@@ -108,7 +113,24 @@ func newServeCommand() *ffcli.Command {
 			if *currency == "" {
 				return errors.New("missing currency")
 			}
-			bot, err := zeken.NewBot(*db, *key, *secret, *proxy, *token, *parser, *controlChat, *signalChat, *maxTrades, *maxTarget, *balance, *currency, *dry, *debug)
+			if *mtID > 0 || *mtHash != "" || *mtPhone != "" || *mtSession != "" || *mtChat > 0 {
+				if *mtID == 0 {
+					return errors.New("missing mtproto app id")
+				}
+				if *mtHash == "" {
+					return errors.New("missing mtproto app hash")
+				}
+				if *mtPhone == "" {
+					return errors.New("missing mtproto phone number")
+				}
+				if *mtSession == "" {
+					return errors.New("missing mtproto session file")
+				}
+				if *mtChat == 0 {
+					return errors.New("missing mtproto chat")
+				}
+			}
+			bot, err := zeken.NewBot(*db, *key, *secret, *proxy, *token, *parser, *controlChat, *signalChat, *mtID, *mtHash, *mtPhone, *mtSession, *mtChat, *maxTrades, *maxTarget, *balance, *currency, *dry, *debug)
 			if err != nil {
 				return err
 			}
