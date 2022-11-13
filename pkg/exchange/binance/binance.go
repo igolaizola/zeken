@@ -6,8 +6,11 @@ import (
 	"errors"
 	"fmt"
 	"net"
+	"net/http"
+	"net/url"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/adshao/go-binance/v2"
 	"github.com/igolaizola/zeken/pkg/exchange"
@@ -26,8 +29,25 @@ const (
 
 var zero = decimal.Decimal{}
 
-func New(log func(v ...interface{}), apiKey, apiSecret string, debug bool) exchange.Exchange {
+func New(log func(v ...interface{}), apiKey, apiSecret, proxy string, debug bool) exchange.Exchange {
 	cli := binance.NewClient(apiKey, apiSecret)
+
+	// Set proxy if needed
+	httpClient := &http.Client{
+		Timeout: 10 * time.Second,
+	}
+	if proxy != "" {
+		proxyURL, err := url.Parse(proxy)
+		if err != nil {
+			log("binance: couldn't parse proxy url %s: %v", proxy, err)
+		} else {
+			httpClient.Transport = &http.Transport{
+				Proxy: http.ProxyURL(proxyURL),
+			}
+		}
+	}
+	cli.HTTPClient = httpClient
+
 	cli.NewSetServerTimeService().Do(context.Background())
 	return &binanceExchange{
 		client: cli,

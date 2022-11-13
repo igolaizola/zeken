@@ -39,7 +39,7 @@ type Bot struct {
 	dry          bool
 }
 
-func NewBot(dbPath, apiKey, apiSecret, token, parserName string, controlChatID, signalChatID, maxTrades, maxTarget int, balanceRatio float64, currency string, dry, debug bool) (*Bot, error) {
+func NewBot(dbPath, apiKey, apiSecret, proxy, token, parserName string, controlChatID, signalChatID, maxTrades, maxTarget int, balanceRatio float64, currency string, dry, debug bool) (*Bot, error) {
 	tgbot, err := telegram.New(token, controlChatID)
 	if err != nil {
 		return nil, fmt.Errorf("zeken: couldn't create telegram bot: %w", err)
@@ -49,7 +49,7 @@ func NewBot(dbPath, apiKey, apiSecret, token, parserName string, controlChatID, 
 	if dry {
 		ex = binance.NewDry(log, debug)
 	} else {
-		ex = binance.New(log, apiKey, apiSecret, debug)
+		ex = binance.New(log, apiKey, apiSecret, proxy, debug)
 	}
 
 	signalParser, err := parser.NewParser(parserName)

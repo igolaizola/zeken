@@ -14,7 +14,7 @@ type binanceExchangeDry struct {
 }
 
 func NewDry(log func(v ...interface{}), debug bool) exchange.Exchange {
-	ex := New(log, "", "", debug)
+	ex := New(log, "", "", "", debug)
 	return &binanceExchangeDry{
 		Exchange: ex,
 	}
